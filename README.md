@@ -49,9 +49,9 @@ is used, it will be cleared first.
 If this is the first time **DBdownload** is started, it will request access to
 your Dropbox data. Just open the link in your browser and allow access.
 
-![Dropbox authentication][http://nilvec.com/static/images/db_oauth.png]
+![Dropbox authentication](http://nilvec.com/static/images/db_oauth.png)
 
-![Dropbox authentication][http://nilvec.com/static/images/db_oauth_success.png]
+![Dropbox authentication](http://nilvec.com/static/images/db_oauth_success.png)
 
 Press enter, and if you have allowed access, **DBdownload** should start
 synchronizing your Dropbox source folder to the target directory.
