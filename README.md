@@ -47,14 +47,17 @@ is used, it will be cleared first.
     Please authorize this URL in the browser and then press enter
 
 If this is the first time **DBdownload** is started, it will request access to
-your Dropbox data. Just open the link in your browser and allow access.
+your Dropbox data. Just open the link in your browser:
 
 ![Dropbox authentication](http://nilvec.com/static/images/db_oauth.png)
 
+and allow access to your Dropbox:
+
 ![Dropbox authentication](http://nilvec.com/static/images/db_oauth_success.png)
 
-Press enter, and if you have allowed access, **DBdownload** should start
-synchronizing your Dropbox source folder to the target directory.
+Get back to the console, press enter, and if you have allowed access,
+**DBdownload** should start synchronizing your Dropbox source folder to the
+target directory.
 
 **DBdownload** has quite some flags and optional parameters, check them out:
 
