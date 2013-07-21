@@ -52,7 +52,7 @@ class DBDownload(object):
     def __init__(self, remote_dir, local_dir, cache_file, sleep=600, prg=None):
         self._logger = logging.getLogger(LOGGER)
 
-        self.remote_dir = remote_dir
+        self.remote_dir = remote_dir.lower()
         if not self.remote_dir.startswith(os.path.sep):
             self.remote_dir = ''.join([os.path.sep, self.remote_dir])
             self.local_dir = local_dir
