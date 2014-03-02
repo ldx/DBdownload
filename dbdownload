@@ -345,7 +345,7 @@ class DBDownload(object):
         to_file.write(f.read())
         to_file.close()
         if modified:
-            os.utime(to_path, (modified, modified))
+            os.utime(to_path.encode('utf-8'), (modified, modified))
 
 
 class DBSession(session.DropboxSession):
