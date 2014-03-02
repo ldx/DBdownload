@@ -161,7 +161,7 @@ class DBDownload(object):
                     line = f.readline()  # Dropbox directory
                     directory = json.loads(line)
                     if directory != self.remote_dir:  # don't use state
-                        self._logger.info('remote dir changed "%s" -> "%s"' %
+                        self._logger.info(u'remote dir changed "%s" -> "%s"' %
                                           (directory, self.remote_dir))
                         dir_changed = True
                 except Exception as e:
@@ -228,7 +228,7 @@ class DBDownload(object):
             elif not meta['is_dir']:
                 stat = os.stat(local_path)
                 if stat.st_mtime != t:
-                    self._logger.debug('%s has been modified locally' %
+                    self._logger.debug(u'%s has been modified locally' %
                                        (local_path))
                     files.append((key, local_path, t))
 
@@ -286,7 +286,7 @@ class DBDownload(object):
                 if (key not in self._tree or
                     self._remote2local(self._tree[key]['path']) != path):
                     rmdirs.append(d)
-                    self._logger.info('RM -RF %s' % (path))
+                    self._logger.info(u'RM -RF %s' % (path))
                     self._rmrf(path)
                     changed = True
 
@@ -294,11 +294,11 @@ class DBDownload(object):
                 dirs.remove(d)
 
             for f in files:
-                path = os.path.join(root, f)
+                path = os.path.join(root, f).decode('utf-8')
                 key = self._local2remote(path).lower()
                 if (key not in self._tree or
                     self._remote2local(self._tree[key]['path']) != path):
-                    self._logger.info('RM %s' % (path))
+                    self._logger.info(u'RM %s' % (path))
                     self._rm(path)
                     changed = True
 
@@ -324,7 +324,7 @@ class DBDownload(object):
             self._rm(path)
 
     def _mkdir(self, d):
-        self._logger.info('MKDIR %s' % (d))
+        self._logger.info(u'MKDIR %s' % (unicode(d)))
         if not os.path.exists(d):
             os.mkdir(d)
         elif os.path.isfile(d):
@@ -332,7 +332,8 @@ class DBDownload(object):
             os.mkdir(d)
 
     def _get_file(self, from_path, to_path, modified=None):
-        self._logger.info('FETCH %s -> %s' % (from_path, to_path))
+        self._logger.info(u'FETCH %s -> %s' %
+                          (unicode(from_path), unicode(to_path)))
         try:
             f, metadata = self.client.get_file_and_metadata(from_path)
         except Exception as e:
@@ -392,7 +393,7 @@ def parse_config(cfg, opts):
     for section_name in parser.sections():
         for name, value in parser.items(section_name):
             if name not in opts:
-                raise Exception('Invalid config file option \'%s\'' % name)
+                raise Exception(u'Invalid config file option \'%s\'' % name)
             opts[name] = value
 
 
@@ -453,7 +454,7 @@ def main():
     locale.setlocale(locale.LC_ALL, 'C')  # to parse time correctly
 
     logger = create_logger(options['log'], options['verbose'])
-    logger.info('*** DBdownload %s starting up ***' % (VERSION))
+    logger.info(u'*** DBdownload %s starting up ***' % (VERSION))
 
     dl = DBDownload(options['source'], options['target'], options['cache'],
                     options['interval'], options['exec'])
