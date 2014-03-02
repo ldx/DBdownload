@@ -218,15 +218,15 @@ class DBDownload(object):
         for key, meta in self._tree.items():
             if not meta:
                 continue
-            local_path = self._remote2local(meta['path'])
+            local_path = unicode(self._remote2local(meta['path']))
             t = self._get_modt(meta['modified'])
-            if not os.path.exists(local_path):
+            if not os.path.exists(local_path.encode('utf-8')):
                 if meta['is_dir']:
                     dirs.append((key, local_path))
                 else:
                     files.append((key, local_path, t))
             elif not meta['is_dir']:
-                stat = os.stat(local_path)
+                stat = os.stat(local_path.encode('utf-8'))
                 if stat.st_mtime != t:
                     self._logger.debug(u'%s has been modified locally' %
                                        (local_path))
@@ -316,7 +316,7 @@ class DBDownload(object):
         os.unlink(path)
 
     def _remove(self, path):
-        if not os.path.exists(path):
+        if not os.path.exists(path.encode('utf-8')):
             return
         if os.path.isdir(path):
             self._rmrf(path)
@@ -325,7 +325,7 @@ class DBDownload(object):
 
     def _mkdir(self, d):
         self._logger.info(u'MKDIR %s' % (unicode(d)))
-        if not os.path.exists(d):
+        if not os.path.exists(d.encode('utf-8')):
             os.mkdir(d)
         elif os.path.isfile(d):
             os.unlink(d)
@@ -341,7 +341,7 @@ class DBDownload(object):
             self._logger.exception(e)
             return  # will check later if we've got everything
 
-        to_file = open(os.path.expanduser(to_path), 'wb')
+        to_file = open(os.path.expanduser(to_path.encode('utf-8')), 'wb')
         to_file.write(f.read())
         to_file.close()
         if modified:
