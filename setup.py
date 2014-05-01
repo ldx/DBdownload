@@ -5,12 +5,13 @@
 from distutils.core import setup
 
 setup(
+    name='dbdownload',
     version='0.1',
     description='',
     author='Nilvec',
     author_email='ldx@nilvec.com',
     url='http://nilvec.com/',
-    scripts=['dbdownload'],
+    scripts=['dbdownload.py'],
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: End Users/Desktop',
