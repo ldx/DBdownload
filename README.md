@@ -17,23 +17,19 @@ DBdownload is the result.
 
 ### Install
 
-Set up a new [virtualenv](http://www.virtualenv.org/en/1.9.X/), e.g. on Ubuntu:
+- Fetch **DBdownload**, e.g., with
 
-    $ sudo apt-get install virtualenv virtualenvwrapper
-    $ . /etc/bash_completion.d/virtualenvwrapper
-    $ mkvirtualenv dbdownload
+        $ git clone https://github.com/ldx/DBdownload.git
 
-You need the [Dropbox Python SDK](https://www.dropbox.com/developers/core/setup#python):
+- Install (this will also install all necessary dependencies, if missing):
 
-    $ wget https://www.dropbox.com/static/developers/dropbox-python-sdk-1.5.1.zip
-    $ unzip dropbox-python-sdk-1.5.1.zip && cd dropbox-python-sdk-1.5.1
-    $ python setup.py install
+        $ python setup.py install
 
-Fetch and install **DBdownload**:
+### Uninstall
 
-    $ git clone https://github.com/ldx/DBdownload.git
-    $ cd DBdownload
-    $ setup.py install
+Once installed, **DBdownload** can be removed from the system with:
+
+    $ pip uninstall dbdownload
 
 ### Use
 
