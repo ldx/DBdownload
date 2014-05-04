@@ -1,4 +1,6 @@
 *.pyc
 *.pyo
-
-/build
+venv
+build
+dist
+dbdownload.egg-info

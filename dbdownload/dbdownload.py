@@ -19,8 +19,18 @@ from dropbox import client, session
 APP_KEY = 'bYeHLWKRctA=|ld63MffhrcyQrbyLTeKvTqxE5cQ3ed1YL2q87GOL/g=='
 ACCESS_TYPE = 'dropbox'  # should be 'dropbox' or 'app_folder'
 LOGGER = 'dbdownload'
-VERSION = '0.1'
+VERSION = 'unknown'
 
+# initialize version from a number given in setup.py
+try:
+    import pkg_resources # part of setuptools
+except ImportError: # standalone script?
+    pass
+else:
+    try:
+        VERSION = pkg_resources.require('dbdownload')[0].version
+    except pkg_resources.DistributionNotFound: # standalone script?
+        pass
 
 def decode_dropbox_key(key):
     key, secret = key.split('|')
