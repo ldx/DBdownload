@@ -32,7 +32,7 @@ setup(
         'Topic :: Networking',
     ],
     license='Apache License, Version 2.0',
-    install_requires = ['dropbox>=2.0.0'],
+    install_requires = ['dropbox>=2.0.0','python-dateutil>=2.0'],
     entry_points = {
         'console_scripts': [
             'dbdownload = dbdownload:main',

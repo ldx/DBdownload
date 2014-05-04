@@ -11,6 +11,8 @@ from base64 import b64decode
 from ConfigParser import SafeConfigParser
 from optparse import OptionParser
 from dropbox import client, session
+import posixpath as dropboxpath
+from dateutil import parser as timeparser, tz as timezone
 
 
 # globals
@@ -19,7 +21,7 @@ from dropbox import client, session
 APP_KEY = 'bYeHLWKRctA=|ld63MffhrcyQrbyLTeKvTqxE5cQ3ed1YL2q87GOL/g=='
 ACCESS_TYPE = 'dropbox'  # should be 'dropbox' or 'app_folder'
 LOGGER = 'dbdownload'
-VERSION = 'unknown'
+VERSION = '0.0'
 
 # initialize version from a number given in setup.py
 try:
@@ -63,13 +65,16 @@ class DBDownload(object):
         self._logger = logging.getLogger(LOGGER)
 
         self.remote_dir = remote_dir.lower()
-        if not self.remote_dir.startswith(os.path.sep):
-            self.remote_dir = ''.join([os.path.sep, self.remote_dir])
-            self.local_dir = local_dir
+        if not self.remote_dir.startswith(dropboxpath.sep):
+            self.remote_dir = dropboxpath.join(dropboxpath.sep, self.remote_dir)
+        if self.remote_dir.endswith(dropboxpath.sep):
+            self.remote_dir, _ = dropboxpath.split(self.remote_dir)
+
+        self.local_dir = local_dir
 
         self.cache_file = cache_file
 
-        self.sleep = sleep
+        self.sleep = int(sleep) # can be string if read from conf
 
         self.executable = prg
 
@@ -93,17 +98,26 @@ class DBDownload(object):
         self._save_state()
 
     def start(self):
-        self._monitor()
+        try:
+            self._monitor()
+        except KeyboardInterrupt:
+            pass
 
     def _local2remote(self, local):
-        rootlen = len(self.local_dir.split(os.path.sep))
+        local_comp = self.local_dir.split(os.path.sep)
+        rootlen = len(local_comp)
+        if not local_comp[-1]: # trailing slash
+            rootlen -= 1
         x = local.split(os.path.sep)[rootlen:]
-        remote = os.path.join(self.remote_dir, *x)
+        remote = dropboxpath.join(self.remote_dir, *x)
         return remote
 
     def _remote2local(self, remote):
-        rootlen = len(self.remote_dir.split(os.path.sep))
-        x = remote.split(os.path.sep)[rootlen:]
+        remote_comp = self.remote_dir.split(dropboxpath.sep)
+        rootlen = len(remote_comp)
+        if not remote_comp[-1]: # trailing slash
+            rootlen -= 1
+        x = remote.split(dropboxpath.sep)[rootlen:]
         local = os.path.join(self.local_dir, *x)
         return local
 
@@ -118,7 +132,8 @@ class DBDownload(object):
 
             # get delta results from Dropbox
             try:
-                result = self.client.delta(self._cursor)
+                result = self.client.delta(
+                    cursor=self._cursor, path_prefix=self.remote_dir)
             except Exception as e:
                 self._logger.error('error getting delta')
                 self._logger.exception(e)
@@ -164,8 +179,15 @@ class DBDownload(object):
 
     # load state from our local cache
     def _load_state(self):
+        cachefile = os.path.expanduser(self.cache_file)
+
+        if not os.path.exists(cachefile):
+            self._logger.warn('Cache file not found: %s' % cachefile)
+            self.reset()
+            return
+
         try:
-            with open(os.path.expanduser(self.cache_file), 'r') as f:
+            with open(cachefile, 'r') as f:
                 dir_changed = False
                 try:
                     line = f.readline()  # Dropbox directory
@@ -216,8 +238,8 @@ class DBDownload(object):
             f.write(''.join([json.dumps(self._tree), '\n']))
 
     def _get_modt(self, modstr):
-        mod = time.strptime(modstr, '%a, %d %b %Y %H:%M:%S +0000')
-        t = time.mktime(mod)
+        mod = timeparser.parse(modstr).astimezone(timezone.tzlocal())
+        t = time.mktime(mod.timetuple())
         return t
 
     # check for files/folders missing or modified locally
@@ -229,7 +251,7 @@ class DBDownload(object):
             if not meta:
                 continue
             local_path = unicode(self._remote2local(meta['path']))
-            t = self._get_modt(meta['modified'])
+            t = self._get_modt(meta.get('client_mtime', meta['modified']))
             if not os.path.exists(local_path.encode('utf-8')):
                 if meta['is_dir']:
                     dirs.append((key, local_path))
@@ -334,11 +356,10 @@ class DBDownload(object):
             self._rm(path)
 
     def _mkdir(self, d):
-        self._logger.info(u'MKDIR %s' % (unicode(d)))
-        if not os.path.exists(d.encode('utf-8')):
-            os.mkdir(d)
-        elif os.path.isfile(d):
+        if os.path.isfile(d):
             os.unlink(d)
+        if not os.path.exists(d.encode('utf-8')):
+            self._logger.info(u'MKDIR %s' % (unicode(d)))
             os.mkdir(d)
 
     def _get_file(self, from_path, to_path, modified=None):
@@ -409,22 +430,25 @@ def parse_config(cfg, opts):
 
 def create_logger(log, verbose):
     FORMAT = '%(asctime)-15s %(message)s'
-    #logging.basicConfig(format=FORMAT)
+    console = log.strip() == '-'
+    if console:
+        logging.basicConfig(format=FORMAT)
     logger = logging.getLogger(LOGGER)
     if verbose:
         logger.setLevel(logging.DEBUG)
     else:
         logger.setLevel(logging.INFO)
-    fh = logging.FileHandler(log)
-    fh.setLevel(logging.DEBUG)
-    formatter = logging.Formatter(FORMAT)
-    fh.setFormatter(formatter)
-    logger.addHandler(fh)
+    if not console:
+        fh = logging.FileHandler(log)
+        fh.setLevel(logging.DEBUG)
+        formatter = logging.Formatter(FORMAT)
+        fh.setFormatter(formatter)
+        logger.addHandler(fh)
     return logger
 
 
 def main():
-    options = {'log': '/tmp/dbdownload.log', 'config': '/etc/dbdownload.conf',
+    options = {'log': '-', 'config': '~/dbdownload.conf',
                'cache': '~/.dbdownload.cache', 'interval': 300, 'source': None,
                'target': None, 'verbose': False, 'reset': False, 'exec': None}
 
@@ -433,7 +457,7 @@ def main():
     parser.add_option('--interval', '-i', type=int, help='check interval')
     parser.add_option('--config', '-c', help='configuration file')
     parser.add_option('--cache', '-a', help='cache file')
-    parser.add_option('--log', '-l', help='logfile')
+    parser.add_option('--log', '-l', help='logfile (pass - for console)')
     parser.add_option('--source', '-s',
                       help='source Dropbox directory to synchronize')
     parser.add_option('--target', '-t', help='local directory to download to')
@@ -459,12 +483,14 @@ def main():
             options[a] = v
 
     if not options['source'] or not options['target']:
-        raise Exception('Please provide source and target directories')
+        error_msg = 'Please provide source and target directories'
+        sys.stderr.write('Error: %s\n' % error_msg)
+        sys.exit(-1)
 
     locale.setlocale(locale.LC_ALL, 'C')  # to parse time correctly
 
     logger = create_logger(options['log'], options['verbose'])
-    logger.info(u'*** DBdownload %s starting up ***' % (VERSION))
+    logger.info(u'*** DBdownload v%s starting up ***' % (VERSION))
 
     dl = DBDownload(options['source'], options['target'], options['cache'],
                     options['interval'], options['exec'])
