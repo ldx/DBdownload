@@ -15,24 +15,25 @@ import posixpath as dropboxpath
 from dateutil import parser as timeparser, tz as timezone
 
 
-# globals
-# got encoded dropbox app key at
+# Globals.
+# Got encoded dropbox app key at
 # https://dl-web.dropbox.com/spa/pjlfdak1tmznswp/api_keys.js/public/index.html
 APP_KEY = 'bYeHLWKRctA=|ld63MffhrcyQrbyLTeKvTqxE5cQ3ed1YL2q87GOL/g=='
 ACCESS_TYPE = 'dropbox'  # should be 'dropbox' or 'app_folder'
 LOGGER = 'dbdownload'
 VERSION = '0.0'
 
-# initialize version from a number given in setup.py
+# Initialize version from a number given in setup.py.
 try:
-    import pkg_resources # part of setuptools
-except ImportError: # standalone script?
+    import pkg_resources  # Part of setuptools.
+except ImportError:  # Standalone script?
     pass
 else:
     try:
         VERSION = pkg_resources.require('dbdownload')[0].version
-    except pkg_resources.DistributionNotFound: # standalone script?
+    except pkg_resources.DistributionNotFound:  # standalone script?
         pass
+
 
 def decode_dropbox_key(key):
     key, secret = key.split('|')
@@ -66,7 +67,8 @@ class DBDownload(object):
 
         self.remote_dir = remote_dir.lower()
         if not self.remote_dir.startswith(dropboxpath.sep):
-            self.remote_dir = dropboxpath.join(dropboxpath.sep, self.remote_dir)
+            self.remote_dir = dropboxpath.join(dropboxpath.sep,
+                                               self.remote_dir)
         if self.remote_dir.endswith(dropboxpath.sep):
             self.remote_dir, _ = dropboxpath.split(self.remote_dir)
 
@@ -74,7 +76,7 @@ class DBDownload(object):
 
         self.cache_file = cache_file
 
-        self.sleep = int(sleep) # can be string if read from conf
+        self.sleep = int(sleep)  # Can be string if read from conf.
 
         self.executable = prg
 
@@ -106,7 +108,7 @@ class DBDownload(object):
     def _local2remote(self, local):
         local_comp = self.local_dir.split(os.path.sep)
         rootlen = len(local_comp)
-        if not local_comp[-1]: # trailing slash
+        if not local_comp[-1]:  # Trailing slash.
             rootlen -= 1
         x = local.split(os.path.sep)[rootlen:]
         remote = dropboxpath.join(self.remote_dir, *x)
@@ -115,22 +117,22 @@ class DBDownload(object):
     def _remote2local(self, remote):
         remote_comp = self.remote_dir.split(dropboxpath.sep)
         rootlen = len(remote_comp)
-        if not remote_comp[-1]: # trailing slash
+        if not remote_comp[-1]:  # Trailing slash.
             rootlen -= 1
         x = remote.split(dropboxpath.sep)[rootlen:]
         local = os.path.join(self.local_dir, *x)
         return local
 
     def _monitor(self):
-        self._mkdir(self.local_dir)  # make sure root directory exists
+        self._mkdir(self.local_dir)  # Make sure root directory exists.
 
         tree = {}
         changed = False
         while True:
-            # check for anything missing locally
+            # Check for anything missing locally.
             changed = self._check_missing()
 
-            # get delta results from Dropbox
+            # Get delta results from Dropbox.
             try:
                 result = self.client.delta(cursor=self._cursor)
             except Exception as e:
@@ -154,7 +156,7 @@ class DBDownload(object):
                     self._tree = dict([(k, v) for k, v in merged.items() if v])
                     changed = True
 
-                rv = self._cleanup_target()  # remove local changes
+                rv = self._cleanup_target()  # Remove local changes.
                 if not changed:
                     changed = rv
                 self._save_state()
@@ -162,12 +164,12 @@ class DBDownload(object):
                 if changed and self.executable:
                     self._launch(self.executable)
 
-                # done processing delta, sleep and check again
+                # Done processing delta, sleep and check again.
                 tree = {}
                 self._logger.debug('sleeping for %d seconds' % (self.sleep))
                 time.sleep(self.sleep)
 
-    # launch a program if anything has changed
+    # Launch a program if anything has changed.
     def _launch(self, prg):
         try:
             subprocess.Popen([prg], shell=True, stdin=None, stdout=None,
@@ -176,7 +178,7 @@ class DBDownload(object):
             self._logger.error('error launching program')
             self._logger.exception(e)
 
-    # load state from our local cache
+    # Load state from our local cache.
     def _load_state(self):
         cachefile = os.path.expanduser(self.cache_file)
 
@@ -189,9 +191,9 @@ class DBDownload(object):
             with open(cachefile, 'r') as f:
                 dir_changed = False
                 try:
-                    line = f.readline()  # Dropbox directory
+                    line = f.readline()  # Dropbox directory.
                     directory = json.loads(line)
-                    if directory != self.remote_dir:  # don't use state
+                    if directory != self.remote_dir:  # Don't use state.
                         self._logger.info(u'remote dir changed "%s" -> "%s"' %
                                           (directory, self.remote_dir))
                         dir_changed = True
@@ -200,7 +202,7 @@ class DBDownload(object):
                     self._logger.exception(e)
 
                 try:
-                    line = f.readline()  # token
+                    line = f.readline()  # Token.
                     self._token = json.loads(line)
                     self._logger.debug('loaded token')
                 except Exception as e:
@@ -210,7 +212,7 @@ class DBDownload(object):
                     return
 
                 try:
-                    line = f.readline()  # cursor
+                    line = f.readline()  # Cursor.
                     self._cursor = json.loads(line)
                     self._logger.debug('loaded delta cursor')
                 except Exception as e:
@@ -218,7 +220,7 @@ class DBDownload(object):
                     self._logger.exception(e)
 
                 try:
-                    line = f.readline()  # tree
+                    line = f.readline()  # Tree.
                     self._tree = json.loads(line)
                     self._logger.debug('loaded local tree')
                 except Exception as e:
@@ -228,7 +230,7 @@ class DBDownload(object):
             self._logger.error('error opening cache file')
             self._logger.exception(e)
 
-    # update our local state file
+    # Update our local state file.
     def _save_state(self):
         with open(os.path.expanduser(self.cache_file), 'w') as f:
             f.write(''.join([json.dumps(self.remote_dir), '\n']))
@@ -241,7 +243,7 @@ class DBDownload(object):
         t = time.mktime(mod.timetuple())
         return t
 
-    # check for files/folders missing or modified locally
+    # Check for files/folders missing or modified locally.
     def _check_missing(self):
         dirs = []
         files = []
@@ -263,7 +265,7 @@ class DBDownload(object):
                                        (local_path))
                     files.append((key, local_path, t))
 
-        dirs.sort()  # make sure we're creating them in order
+        dirs.sort()  # Make sure we're creating them in order.
 
         for _, d in dirs:
             self._mkdir(d)
@@ -275,17 +277,17 @@ class DBDownload(object):
 
         return changed
 
-    # apply any outstanding change
+    # Apply any outstanding change.
     def _apply_delta(self, tree):
         self._logger.debug('applying changes in tree')
         rm = [self._tree[n]['path'] for n in tree if not tree[n] and n in
               self._tree and self._tree[n]]
         rm.sort(reverse=True)
         for path in rm:
-            self._remove(self._remote2local(path))  # remove file or directory
+            self._remove(self._remote2local(path))  # Remove file/directory.
 
         dirs = [n for n in tree if tree[n] and tree[n]['is_dir']]
-        dirs.sort()  # make sure we're creating them in order
+        dirs.sort()  # Make sure we're creating them in order.
 
         for d in dirs:
             rev = d in tree and tree[d]['revision'] or -1
@@ -304,7 +306,7 @@ class DBDownload(object):
                 self._get_file(f, local_path,
                                self._get_modt(tree[f]['modified']))
 
-    # remove anything that is not in dropbox
+    # Remove anything that is not in dropbox.
     def _cleanup_target(self):
         self._logger.debug('cleanup using merged tree')
 
@@ -369,7 +371,7 @@ class DBDownload(object):
         except Exception as e:
             self._logger.error('error fetching file')
             self._logger.exception(e)
-            return  # will check later if we've got everything
+            return  # Will check later if we've got everything.
 
         to_file = open(os.path.expanduser(to_path.encode('utf-8')), 'wb')
         to_file.write(f.read())
@@ -451,7 +453,7 @@ def main():
                'cache': '~/.dbdownload.cache', 'interval': 300, 'source': None,
                'target': None, 'verbose': False, 'reset': False, 'exec': None}
 
-    # first parse any command line arguments
+    # First parse any command line arguments.
     parser = OptionParser(description='Do one-way Dropbox synchronization')
     parser.add_option('--interval', '-i', type=int, help='check interval')
     parser.add_option('--config', '-c', help='configuration file')
@@ -471,11 +473,11 @@ def main():
         print 'Leftover command line arguments', args
         sys.exit(1)
 
-    # parse configuration file
+    # Parse configuration file.
     parse_config((opts.config and [opts.config] or
                   [options['config']])[0], options)
 
-    # override parameters from config file with cmdline options
+    # Override parameters from config file with cmdline options.
     for a in options:
         v = getattr(opts, a)
         if v:
@@ -486,7 +488,7 @@ def main():
         sys.stderr.write('Error: %s\n' % error_msg)
         sys.exit(-1)
 
-    locale.setlocale(locale.LC_ALL, 'C')  # to parse time correctly
+    locale.setlocale(locale.LC_ALL, 'C')  # To parse time correctly.
 
     logger = create_logger(options['log'], options['verbose'])
     logger.info(u'*** DBdownload v%s starting up ***' % (VERSION))
