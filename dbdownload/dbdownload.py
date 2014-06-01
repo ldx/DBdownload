@@ -132,8 +132,7 @@ class DBDownload(object):
 
             # get delta results from Dropbox
             try:
-                result = self.client.delta(
-                    cursor=self._cursor, path_prefix=self.remote_dir)
+                result = self.client.delta(cursor=self._cursor)
             except Exception as e:
                 self._logger.error('error getting delta')
                 self._logger.exception(e)
