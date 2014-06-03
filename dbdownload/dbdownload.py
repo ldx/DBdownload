@@ -451,7 +451,8 @@ def create_logger(log, verbose):
 def main():
     options = {'log': '-', 'config': '~/dbdownload.conf',
                'cache': '~/.dbdownload.cache', 'interval': 300, 'source': None,
-               'target': None, 'verbose': False, 'reset': False, 'exec': None}
+               'target': None, 'verbose': False, 'reset': False, 'exec': None,
+               'authorizeonly': False}
 
     # First parse any command line arguments.
     parser = OptionParser(description='Do one-way Dropbox synchronization')
@@ -466,6 +467,8 @@ def main():
                       help='enable verbose logging')
     parser.add_option('--reset', '-r', action='store_true',
                       help='reset synchronization')
+    parser.add_option('--authorizeonly', '-u', action='store_true',
+                      help='only authorize application and exit')
     parser.add_option('--exec', '-x',
                       help='execute program when directory has changed')
     (opts, args) = parser.parse_args()
@@ -497,7 +500,10 @@ def main():
                     options['interval'], options['exec'])
     if options['reset']:
         dl.reset()
-    dl.start()
+    if not opts.authorizeonly:
+        dl.start()
+    else:
+        dl.reset()
 
 if __name__ == '__main__':
     main()
