@@ -4,16 +4,17 @@ import json
 import locale
 import logging
 import os
+import posixpath as dropboxpath
 import subprocess
 import sys
 import time
 from base64 import b64decode
 from ConfigParser import SafeConfigParser
 from optparse import OptionParser
-from dropbox import client, session
-import posixpath as dropboxpath
-from dateutil import parser as timeparser, tz as timezone
 
+from dateutil import parser as timeparser
+from dateutil import tz as timezone
+from dropbox import client, session
 
 # Globals.
 # Got encoded dropbox app key at
@@ -62,6 +63,7 @@ def decode_dropbox_key(key):
 
 
 class DBDownload(object):
+
     def __init__(self, remote_dir, local_dir, cache_file, sleep=600, prg=None):
         self._logger = logging.getLogger(LOGGER)
 
@@ -144,7 +146,7 @@ class DBDownload(object):
 
             for path, metadata in result['entries']:
                 if os.path.commonprefix([
-                    path, self.remote_dir]) == self.remote_dir:
+                        path, self.remote_dir]) == self.remote_dir:
                     tree[path] = metadata
 
             self._cursor = result['cursor']
@@ -286,8 +288,7 @@ class DBDownload(object):
         for path in rm:
             self._remove(self._remote2local(path))  # Remove file/directory.
 
-        dirs = [n for n in tree if tree[n] and tree[n]['is_dir']]
-        dirs.sort()  # Make sure we're creating them in order.
+        dirs = sorted([n for n in tree if tree[n] and tree[n]['is_dir']])
 
         for d in dirs:
             rev = d in tree and tree[d]['revision'] or -1
@@ -317,7 +318,7 @@ class DBDownload(object):
                 path = os.path.join(root, d)
                 key = self._local2remote(path).lower()
                 if (key not in self._tree or
-                    self._remote2local(self._tree[key]['path']) != path):
+                        self._remote2local(self._tree[key]['path']) != path):
                     rmdirs.append(d)
                     self._logger.info(u'RM -RF %s' % (path))
                     self._rmrf(path)
@@ -330,7 +331,7 @@ class DBDownload(object):
                 path = os.path.join(root, f).decode('utf-8')
                 key = self._local2remote(path).lower()
                 if (key not in self._tree or
-                    self._remote2local(self._tree[key]['path']) != path):
+                        self._remote2local(self._tree[key]['path']) != path):
                     self._logger.info(u'RM %s' % (path))
                     self._rm(path)
                     changed = True
@@ -381,6 +382,7 @@ class DBDownload(object):
 
 
 class DBSession(session.DropboxSession):
+
     def link(self):
         request_token = self.obtain_request_token()
 
@@ -398,6 +400,7 @@ class DBSession(session.DropboxSession):
 
 
 class FakeSecHead(object):
+
     def __init__(self, fp):
         self.fp = fp
         self.sechead = '[asection]\n'
