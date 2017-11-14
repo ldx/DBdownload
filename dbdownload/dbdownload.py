@@ -16,6 +16,9 @@ import dropbox
 import jsonpickle
 
 # Globals.
+# Got encoded dropbox app key at
+# https://dl-web.dropbox.com/spa/pjlfdak1tmznswp/api_keys.js/public/index.html
+APP_KEY = 'bYeHLWKRctA=|ld63MffhrcyQrbyLTeKvTqxE5cQ3ed1YL2q87GOL/g=='
 LOGGER = 'dbdownload'
 VERSION = '0.0'
 
@@ -31,9 +34,35 @@ else:
         pass
 
 
+def decode_dropbox_key(key):
+    key, secret = key.split('|')
+    key = b64decode(key)
+    key = [ord(x) for x in key]
+    secret = b64decode(secret)
+
+    s = range(256)
+    y = 0
+    for x in xrange(256):
+        y = (y + s[len(key)] + key[x % len(key)]) % 256
+        s[x], s[y] = s[y], s[x]
+
+    x = y = 0
+    result = []
+    for z in range(len(secret)):
+        x = (x + 1) % 256
+        y = (y + s[x]) % 256
+        s[x], s[y] = s[y], s[x]
+        k = s[(s[x] + s[y]) % 256]
+        result.append(chr((k ^ ord(secret[z])) % 256))
+
+    # key = ''.join([chr(a) for a in key])
+    # return '|'.join([b64encode(key), b64encode(''.join(result))])
+    return ''.join(result).split('?', 2)
+
+
 class DBDownload(object):
 
-    def __init__(self, remote_dir, local_dir, cache_file, token, sleep=600, prg=None):
+    def __init__(self, remote_dir, local_dir, cache_file, sleep=600, prg=None):
         self._logger = logging.getLogger(LOGGER)
 
         self.remote_dir = remote_dir.lower()
@@ -52,9 +81,24 @@ class DBDownload(object):
         self.executable = prg
 
         self._tree = {}
-        self._token = token
+        self._token = None
         self._cursor = None
         self._load_state()
+
+        if self._token is None:
+            key, secret = decode_dropbox_key(APP_KEY)
+            auth_flow = dropbox.DropboxOAuth2FlowNoRedirect(key, secret)
+            auth_url = auth_flow.start()
+            print "1. Go to: " + auth_url
+            print "2. Click \"Allow\" (you might have to log in first)."
+            print "3. Copy the authorization code."
+            auth_code = raw_input("Enter the authorization code here: ").strip()
+            try:
+                oauth_result = auth_flow.finish(auth_code)
+            except Exception:
+                self._logger.exception("")
+                return
+            self._token = oauth_result.access_token
 
         self.client = dropbox.Dropbox(self._token)
 
@@ -166,6 +210,16 @@ class DBDownload(object):
                     self._logger.exception(e)
 
                 try:
+                    line = f.readline()  # Token.
+                    self._token = json.loads(line)
+                    self._logger.debug('loaded token')
+                except Exception as e:
+                    self._logger.warn('can\'t load cache state')
+                    self._logger.exception(e)
+                if dir_changed:
+                    return
+
+                try:
                     line = f.readline()  # Cursor.
                     self._cursor = json.loads(line)
                     self._logger.debug('loaded delta cursor')
@@ -188,6 +242,7 @@ class DBDownload(object):
     def _save_state(self):
         with open(os.path.expanduser(self.cache_file), 'w') as f:
             f.write(''.join([json.dumps(self.remote_dir), '\n']))
+            f.write(''.join([json.dumps(self._token), '\n']))
             f.write(''.join([json.dumps(self._cursor), '\n']))
             f.write(''.join([jsonpickle.encode(self._tree), '\n']))
 
@@ -377,17 +432,15 @@ def create_logger(log, verbose):
 
 def main():
     options = {'log': '-', 'config': '~/dbdownload.conf',
-               'cache': '~/.dbdownload.cache', 'token': None, 'interval': 300,
+               'cache': '~/.dbdownload.cache', 'interval': 300,
                'source': None, 'target': None, 'verbose': False, 'reset': False,
-               'exec': None}
+               'exec': None, 'authorizeonly': False}
 
     # First parse any command line arguments.
     parser = OptionParser(description='Do one-way Dropbox synchronization')
     parser.add_option('--interval', '-i', type=int, help='check interval')
     parser.add_option('--config', '-c', help='configuration file')
     parser.add_option('--cache', '-a', help='cache file')
-    parser.add_option('--token', '-k', help='Access token '
-                      '(see https://www.dropbox.com/developers/apps)')
     parser.add_option('--log', '-l', help='logfile (pass - for console)')
     parser.add_option('--source', '-s',
                       help='source Dropbox directory to synchronize')
@@ -396,6 +449,8 @@ def main():
                       help='enable verbose logging')
     parser.add_option('--reset', '-r', action='store_true',
                       help='reset synchronization')
+    parser.add_option('--authorizeonly', '-u', action='store_true',
+                      help='only authorize application and exit')
     parser.add_option('--exec', '-x',
                       help='execute program when directory has changed')
     (opts, args) = parser.parse_args()
@@ -418,22 +473,20 @@ def main():
         sys.stderr.write('Error: %s\n' % error_msg)
         sys.exit(-1)
 
-    if not options['token']:
-        error_msg = 'Please provide authentication token.  See https://www.dropbox.com/developers/apps to obtain one.'
-        sys.stderr.write('Error: %s\n' % error_msg)
-        sys.exit(-1)
-
     locale.setlocale(locale.LC_ALL, 'C')  # To parse time correctly.
 
     logger = create_logger(options['log'], options['verbose'])
     logger.info(u'*** DBdownload v%s starting up ***' % VERSION)
 
     dl = DBDownload(options['source'], options['target'], options['cache'],
-                    options['token'], options['interval'], options['exec'])
+                    options['interval'], options['exec'])
     if options['reset']:
         dl.reset()
 
-    dl.start()
+    if not opts.authorizeonly:
+        dl.start()
+    else:
+        dl.reset()
 
 if __name__ == '__main__':
     main()
