@@ -100,7 +100,11 @@ class DBDownload(object):
                 sys.exit(1)
             self._token = oauth_result.access_token
 
-        self.client = dropbox.Dropbox(self._token)
+        try:
+            self.client = dropbox.Dropbox(self._token)
+        except Exception as e:
+            self._logger.exception("Unable to connect to Dropbox.")
+            sys.exit(1)
 
     def reset(self):
         self._logger.debug('resetting local state')
