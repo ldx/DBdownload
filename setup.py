@@ -11,7 +11,7 @@ def read(fname):
 
 setup(
     name='dbdownload',
-    version='0.2',
+    version='0.3',
     description='Simple Dropbox client written in Python',
     keywords="dropbox tools dbdownload",
     long_description=read('README.md'),

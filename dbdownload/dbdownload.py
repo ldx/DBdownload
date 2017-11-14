@@ -96,8 +96,8 @@ class DBDownload(object):
             try:
                 oauth_result = auth_flow.finish(auth_code)
             except Exception:
-                self._logger.exception("")
-                return
+                self._logger.error("Invalid authorization code. Exiting.")
+                sys.exit(1)
             self._token = oauth_result.access_token
 
         self.client = dropbox.Dropbox(self._token)
