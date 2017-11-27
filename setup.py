@@ -11,7 +11,7 @@ def read(fname):
 
 setup(
     name='dbdownload',
-    version='0.2',
+    version='0.3',
     description='Simple Dropbox client written in Python',
     keywords="dropbox tools dbdownload",
     long_description=read('README.md'),
@@ -32,7 +32,7 @@ setup(
         'Topic :: Networking',
     ],
     license='Apache License, Version 2.0',
-    install_requires = ['dropbox>=2.0.0','python-dateutil>=2.0'],
+    install_requires = ['dropbox>=8.4.1', 'jsonpickle>=0.9.5'],
     entry_points = {
         'console_scripts': [
             'dbdownload = dbdownload:main',

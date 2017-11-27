@@ -39,8 +39,10 @@ into. If the local folder does not exist **DBdownload** will create it, if it
 is used, it will be cleared first.
 
     $ dbdownload -s test -t /tmp/test
-    URL: https://www.dropbox.com/1/oauth/authorize?oauth_token=fjlkadf8a7dfjxy
-    Please authorize this URL in the browser and then press enter
+    1. Go to: https://www.dropbox.com/oauth2/authorize?response_type=code&client_id=6m8gx7bmf2yawbm
+    2. Click "Allow" (you might have to log in first).
+    3. Copy the authorization code.
+    Enter the authorization code here:
 
 If this is the first time **DBdownload** is started, it will request access to
 your Dropbox data. Just open the link in your browser:
@@ -51,9 +53,9 @@ and allow access to your Dropbox:
 
 ![Dropbox authentication](http://nilvec.com/static/images/db_oauth_success.png)
 
-Get back to the console, press enter, and if you have allowed access,
-**DBdownload** should start synchronizing your Dropbox source folder to the
-target directory.
+Get back to the console, paste the authorization code you were given, and if you
+have allowed access, **DBdownload** should start synchronizing your Dropbox source 
+folder to the target directory.
 
 **DBdownload** has quite some flags and optional parameters, check them out:
 
