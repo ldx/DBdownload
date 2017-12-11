@@ -256,8 +256,9 @@ class DBDownload(object):
         files = []
         changed = False
         for key, meta in self._tree.items():
-            if not meta:
+            if not meta or isinstance(meta, dropbox.files.DeletedMetadata):
                 continue
+
             local_path = unicode(self._remote2local(meta.path_display))
 
             if not os.path.exists(local_path.encode('utf-8')):
@@ -266,6 +267,7 @@ class DBDownload(object):
                 else:
                     t = time.mktime(meta.client_modified.timetuple())
                     files.append((key, local_path, t))
+
             elif type(meta) is dropbox.files.FileMetadata:
                 t = time.mktime(meta.client_modified.timetuple())
                 stat = os.stat(local_path.encode('utf-8'))
@@ -305,7 +307,11 @@ class DBDownload(object):
 
         for f in files:
             rev = f in tree and tree[f].rev or -1
-            oldrev = f in self._tree and self._tree[f].rev or -1
+            oldrev = f in self._tree \
+                     and not isinstance(
+                         self._tree[f], dropbox.files.DeletedMetadata) \
+                     and self._tree[f].rev \
+                     or -1
             # Revisions are no longer simple ints, so the best we can do is check equality, not order
             if oldrev != rev:
                 local_path = self._remote2local(tree[f].path_display)
@@ -313,16 +319,19 @@ class DBDownload(object):
 
     # Remove anything that is not in dropbox.
     def _cleanup_target(self):
-        self._logger.debug('cleanup using merged tree')
+        def _is_deleted(key, path):
+            return (key not in self._tree \
+                    or self._remote2local(self._tree[key].path_display) != path \
+                    or isinstance(self._tree[key], dropbox.files.DeletedMetadata))
 
+        self._logger.debug('cleanup using merged tree')
         changed = False
         for root, dirs, files in os.walk(self.local_dir):
             rmdirs = []
             for d in dirs:
                 path = os.path.join(root, d)
                 key = self._local2remote(path).lower()
-                if (key not in self._tree or
-                        self._remote2local(self._tree[key].path_display) != path):
+                if _is_deleted(key, path):
                     rmdirs.append(d)
                     self._logger.info(u'RM -RF %s' % path)
                     self._rmrf(path)
@@ -334,8 +343,7 @@ class DBDownload(object):
             for f in files:
                 path = os.path.join(root, f).decode('utf-8')
                 key = self._local2remote(path).lower()
-                if (key not in self._tree or
-                        self._remote2local(self._tree[key].path_display) != path):
+                if _is_deleted(key, path):
                     self._logger.info(u'RM %s' % path)
                     self._rm(path)
                     changed = True
@@ -494,4 +502,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
