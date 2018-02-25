@@ -71,6 +71,8 @@ class DBDownload(object):
                                                self.remote_dir)
         if self.remote_dir.endswith(dropboxpath.sep):
             self.remote_dir, _ = dropboxpath.split(self.remote_dir)
+        if self.remote_dir == dropboxpath.sep:
+            self.remote_dir = ""
 
         self.local_dir = local_dir
 
