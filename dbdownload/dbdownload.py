@@ -71,8 +71,6 @@ class DBDownload(object):
                                                self.remote_dir)
         if self.remote_dir.endswith(dropboxpath.sep):
             self.remote_dir, _ = dropboxpath.split(self.remote_dir)
-        if self.remote_dir == dropboxpath.sep:
-            self.remote_dir = ""
 
         self.local_dir = local_dir
 
@@ -149,7 +147,8 @@ class DBDownload(object):
             # If we don't have a cursor yet, call files_list_folder
             try:
                 if self._cursor is None:
-                    result = self.client.files_list_folder(self.remote_dir, recursive=True)
+                    remote_dir = "" if self.remote_dir == dropboxpath.sep else self.remote_dir
+                    result = self.client.files_list_folder(remote_dir, recursive=True)
                 else:
                     result = self.client.files_list_folder_continue(self._cursor)
             except Exception as e:
