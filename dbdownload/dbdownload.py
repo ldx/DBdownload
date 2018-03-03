@@ -330,7 +330,7 @@ class DBDownload(object):
         for root, dirs, files in os.walk(self.local_dir):
             rmdirs = []
             for d in dirs:
-                path = os.path.join(root, d)
+                path = os.path.join(root, d).decode('utf-8')
                 key = self._local2remote(path).lower()
                 if _is_deleted(key, path):
                     rmdirs.append(d)
