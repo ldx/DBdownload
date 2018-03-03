@@ -11,6 +11,7 @@ import time
 from base64 import b64decode
 from ConfigParser import SafeConfigParser
 from optparse import OptionParser
+from dropbox_content_hasher import DropboxContentHasher
 
 import dropbox
 import jsonpickle
@@ -117,6 +118,16 @@ class DBDownload(object):
             self._monitor()
         except KeyboardInterrupt:
             pass
+
+    def _get_content_hash(self, path):
+        hasher = DropboxContentHasher()
+        with open(path, 'rb') as f:
+            while True:
+                chunk = f.read(1024)  # or whatever chunk size you want
+                if len(chunk) == 0:
+                    break
+                hasher.update(chunk)
+        return hasher.hexdigest()
 
     def _local2remote(self, local):
         local_comp = self.local_dir.split(os.path.sep)
@@ -289,6 +300,15 @@ class DBDownload(object):
 
         return changed
 
+    def _is_uncached_matching_file(self, tree, from_path, to_path):
+        match = False
+
+        if tree[from_path] and os.path.exists(to_path.encode('utf-8')):
+            content_hash = self._get_content_hash(to_path.encode('utf-8'))
+            match = tree[from_path].content_hash == content_hash
+
+        return match
+
     # Apply any outstanding change.
     def _apply_delta(self, tree):
         self._logger.debug('applying changes in tree')
@@ -316,7 +336,13 @@ class DBDownload(object):
             # Revisions are no longer simple ints, so the best we can do is check equality, not order
             if oldrev != rev:
                 local_path = self._remote2local(tree[f].path_display)
-                self._get_file(f, local_path, time.mktime(tree[f].client_modified.timetuple()))
+                modified = time.mktime(tree[f].client_modified.timetuple())
+                if self._is_uncached_matching_file(tree, f, local_path):
+                    self._logger.info(u'SKIP %s -> %s' %
+                                      (unicode(f), unicode(local_path)))
+                    os.utime(local_path.encode('utf-8'), (modified, modified))
+                else:
+                    self._get_file(f, local_path, modified)
 
     # Remove anything that is not in dropbox.
     def _cleanup_target(self):
