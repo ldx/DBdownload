@@ -322,7 +322,7 @@ class DBDownload(object):
     def _cleanup_target(self):
         def _is_deleted(key, path):
             return (key not in self._tree \
-                    or self._remote2local(self._tree[key].path_display) != path \
+                    or self._remote2local(self._tree[key].path_display).lower() != path.lower() \
                     or isinstance(self._tree[key], dropbox.files.DeletedMetadata))
 
         self._logger.debug('cleanup using merged tree')
