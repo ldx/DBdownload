@@ -219,7 +219,7 @@ class DBDownload(object):
                     self._token = json.loads(line)
                     self._logger.debug('loaded token')
                 except Exception as e:
-                    self._logger.warn('can\'t load cache state')
+                    self._logger.warn('can\'t load token from cache state')
                     self._logger.exception(e)
                 if dir_changed:
                     return
@@ -229,7 +229,7 @@ class DBDownload(object):
                     self._cursor = json.loads(line)
                     self._logger.debug('loaded delta cursor')
                 except Exception as e:
-                    self._logger.warn('can\'t load cache state')
+                    self._logger.warn('can\'t load delta cursor from cache state')
                     self._logger.exception(e)
 
                 try:
@@ -237,7 +237,7 @@ class DBDownload(object):
                     self._tree = jsonpickle.decode(line)
                     self._logger.debug('loaded local tree')
                 except Exception as e:
-                    self._logger.warn('can\'t load cache state')
+                    self._logger.warn('can\'t load local tree from cache state')
                     self._logger.exception(e)
         except Exception as e:
             self._logger.error('error opening cache file')
