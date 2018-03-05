@@ -242,6 +242,8 @@ class DBDownload(object):
         except Exception as e:
             self._logger.error('error opening cache file')
             self._logger.exception(e)
+        finally:
+            f.close()
 
     # Update our local state file.
     def _save_state(self):
@@ -250,6 +252,7 @@ class DBDownload(object):
             f.write(''.join([json.dumps(self._token), '\n']))
             f.write(''.join([json.dumps(self._cursor), '\n']))
             f.write(''.join([jsonpickle.encode(self._tree), '\n']))
+            f.close()
 
     # Check for files/folders missing or modified locally.
     def _check_missing(self):
