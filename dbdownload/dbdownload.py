@@ -219,7 +219,7 @@ class DBDownload(object):
                     self._token = json.loads(line)
                     self._logger.debug('loaded token')
                 except Exception as e:
-                    self._logger.warn('can\'t load cache state')
+                    self._logger.warn('can\'t load token from cache state')
                     self._logger.exception(e)
                 if dir_changed:
                     return
@@ -229,7 +229,7 @@ class DBDownload(object):
                     self._cursor = json.loads(line)
                     self._logger.debug('loaded delta cursor')
                 except Exception as e:
-                    self._logger.warn('can\'t load cache state')
+                    self._logger.warn('can\'t load delta cursor from cache state')
                     self._logger.exception(e)
 
                 try:
@@ -237,11 +237,13 @@ class DBDownload(object):
                     self._tree = jsonpickle.decode(line)
                     self._logger.debug('loaded local tree')
                 except Exception as e:
-                    self._logger.warn('can\'t load cache state')
+                    self._logger.warn('can\'t load local tree from cache state')
                     self._logger.exception(e)
         except Exception as e:
             self._logger.error('error opening cache file')
             self._logger.exception(e)
+        finally:
+            f.close()
 
     # Update our local state file.
     def _save_state(self):
@@ -250,6 +252,7 @@ class DBDownload(object):
             f.write(''.join([json.dumps(self._token), '\n']))
             f.write(''.join([json.dumps(self._cursor), '\n']))
             f.write(''.join([jsonpickle.encode(self._tree), '\n']))
+            f.close()
 
     # Check for files/folders missing or modified locally.
     def _check_missing(self):
@@ -322,7 +325,7 @@ class DBDownload(object):
     def _cleanup_target(self):
         def _is_deleted(key, path):
             return (key not in self._tree \
-                    or self._remote2local(self._tree[key].path_display) != path \
+                    or self._remote2local(self._tree[key].path_display).lower() != path.lower() \
                     or isinstance(self._tree[key], dropbox.files.DeletedMetadata))
 
         self._logger.debug('cleanup using merged tree')
@@ -330,7 +333,7 @@ class DBDownload(object):
         for root, dirs, files in os.walk(self.local_dir):
             rmdirs = []
             for d in dirs:
-                path = os.path.join(root, d)
+                path = os.path.join(root, d).decode('utf-8')
                 key = self._local2remote(path).lower()
                 if _is_deleted(key, path):
                     rmdirs.append(d)
